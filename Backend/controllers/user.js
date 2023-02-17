@@ -1,4 +1,4 @@
 exports.createUser = (req, resp) => {
-  resp.send("User router");
+  resp.send("User router with nodemon");
 };
 

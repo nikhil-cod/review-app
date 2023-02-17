@@ -3,7 +3,7 @@ const app = express();
 
 const userRouter = require("./routes/user");
 
-app.use(userRouter);
+app.use("/api",userRouter);
 // We are Refactoring our code in MVC Pattern (Modal View Controller)
 app.get('/',(req,res)=>{
 res.send("Hello, You are on 8000");
