@@ -1,8 +1,10 @@
 const UserSchema = require("../models/user");
-const nodemailer = require("nodemailer");
 const EmailVerificationToken = require("../models/emailVerificationToken");
 const { isValidObjectId } = require("mongoose");
 const User = require("../models/user");
+const { madeOTP, generateMailTransporter } = require("../utils/mail");
+const PasswordResetToken = require("../models/passwordResetToken");
+const { sendError, generateRandomByte } = require("../utils/helper");
 
 exports.createUser = async (req, resp) => {
   const { name, email, password } = req.body;
@@ -16,12 +18,7 @@ exports.createUser = async (req, resp) => {
   await newUser.save();
 
   //Generate 6 digit OTP
-
-  let OTP = "";
-  for (let i = 0; i <= 5; i++) {
-    const randomVal = Math.round(Math.random() * 9);
-    OTP += randomVal;
-  }
+  let OTP = madeOTP(6);
 
   //Store OTP insider our DB
   const newEmailVerification = new EmailVerificationToken({
@@ -33,15 +30,7 @@ exports.createUser = async (req, resp) => {
 
   //Send OTP to user
 
-  var transport = nodemailer.createTransport({
-    host: "sandbox.smtp.mailtrap.io",
-    port: 2525,
-    auth: {
-      user: "c157121cc5b7d8",
-      pass: "5ae6381e0987f5",
-    },
-  });
-  console.log("OTP ==>", OTP);
+  var transport = generateMailTransporter();
 
   transport.sendMail({
     from: "verify@reviewapp.com",
@@ -66,7 +55,8 @@ exports.verifyEmail = async (req, res) => {
 
   const user = await User.findById(userId);
 
-  if (!user) return res.json({ error: "User Not Found!" });
+  // if (!user) return res.json({ error: "User Not Found!" });
+  if (!user) return sendError(res, "User Not Found!");
 
   if (user.isVerified)
     return res.json({
@@ -94,44 +84,39 @@ exports.verifyEmail = async (req, res) => {
     message: "Your email is verified",
   });
 
-  var transport = nodemailer.createTransport({
-    host: "sandbox.smtp.mailtrap.io",
-    port: 2525,
-    auth: {
-      user: "c157121cc5b7d8",
-      pass: "5ae6381e0987f5",
-    },
-  });
+  var transport = generateMailTransporter();
   transport.sendMail({
     from: "verify@reviewapp.com",
     to: user.email,
     subject: "Verification Successful!",
     html: `
-    <h2>Welcome to review app!!
-    </h2>
-    `,
+      <h2>Welcome to review app!!
+      </h2>
+      `,
   });
 };
 
-exports.resendEmailVerificationToken = async(req,res) =>{
-  console.log("Request ===> ", req.body)
-  const {userId} = req.body;
+exports.resendEmailVerificationToken = async (req, res) => {
+  console.log("Request ===> ", req.body);
+  const { userId } = req.body;
 
   const user = await User.findById(userId);
 
-  if(!user) return res.json({error:"User not found!"});
+  if (!user) return sendError(res, "User not found", 404);
 
-  if(user.isVerified) return res.json({
-    error: "This email is already verified"
-  })
+  if (user.isVerified)
+    return res.json({
+      error: "This email is already verified",
+    });
 
   const token = await EmailVerificationToken.findOne({
-    owner:userId
+    owner: userId,
   });
 
-  if(token) res.json({
-    error:"Only after one hour you can request for another token."
-  });
+  if (token)
+    res.json({
+      error: "Only after one hour you can request for another token.",
+    });
 
   let OTP = "";
   for (let i = 0; i <= 5; i++) {
@@ -139,15 +124,7 @@ exports.resendEmailVerificationToken = async(req,res) =>{
     OTP += randomVal;
   }
 
-  var transport = nodemailer.createTransport({
-    host: "sandbox.smtp.mailtrap.io",
-    port: 2525,
-    auth: {
-      user: "c157121cc5b7d8",
-      pass: "5ae6381e0987f5",
-    },
-  });
-  console.log("OTP ==>", OTP);
+  var transport = generateMailTransporter();
 
   transport.sendMail({
     from: "verify@reviewapp.com",
@@ -161,4 +138,43 @@ exports.resendEmailVerificationToken = async(req,res) =>{
   res.json({
     message: "OTP sent to your Mail",
   });
-}
+};
+
+exports.forgetPassword = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) return sendError(res, "email is missing!");
+
+  const user = await User.findOne({ email });
+  if (!user) return sendError(res, "User not found!", 404);
+
+  const alreadyHasToken = await PasswordResetToken.findOne({ owner: user._id });
+  if (alreadyHasToken)
+    return sendError(
+      res,
+      "Only after one hour you can request for another token!"
+    );
+
+  const token = await generateRandomByte();
+  const newPasswordResetToken = await PasswordResetToken({
+    owner: user._id,
+    token,
+  });
+  await newPasswordResetToken.save();
+
+  const resetPasswordUrl = `http://localhost:3000/reset-password?token=${token}&id=${user._id}`;
+
+  const transport = generateMailTransporter();
+
+  transport.sendMail({
+    from: "security@reviewapp.com",
+    to: user.email,
+    subject: "Reset Password Link",
+    html: `
+      <p>Click here to reset password</p>
+      <a href='${resetPasswordUrl}'>Change Password</a>
+    `,
+  });
+
+  res.json({ message: "Link sent to your email!" });
+};
