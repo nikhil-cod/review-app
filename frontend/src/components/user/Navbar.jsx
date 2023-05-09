@@ -1,4 +1,5 @@
 import React from "react";
+import {BsFillSunFill} from "react-icons/bs"
 
 export default function Navbar() {
     return (
@@ -7,7 +8,19 @@ export default function Navbar() {
                 <div className="flex justify-between items-center">
                     <img src="./logo.png" alt="logo" className="h-10"></img>
                     <ul>
-                        <li>login </li>
+                        <li>
+                            <button className="bg-dark-subtle p-1 rounded">
+                            <BsFillSunFill className="text-secondary" size={24}/>
+                            </button>
+                        </li>
+                        <li>
+                            <input
+                            type="text"
+                            className="border-2 border-dark-subtle p-1"
+                            placeholder="search..."
+                            >
+                            </input>
+                        </li>
                     </ul>
                 </div>
             </div>
