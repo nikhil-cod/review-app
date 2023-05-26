@@ -1,12 +1,13 @@
-import logo from './logo.svg';
 import './App.css';
 import Navbar from './components/user/Navbar';
+import SignIn from './components/auth/SignIn';
 
 function App() {
   return (
-    <div>
+    <>
       <Navbar/>
-    </div>
+      <SignIn/>
+    </>
   );
 }
 
