@@ -1,13 +1,12 @@
-import React, { useContext } from "react";
 import Container from "../Container";
 import FormInput from "../form/FormInput";
 import Submit from "../form/Submit";
 import Title from "../form/Title";
 import CustomLink from "../CustomLink";
-import { ThemeContext } from "../context/ThemeProvider";
+import { useTheme } from "../hooks";
 export default function Signin() {
 
-  const theme =  useContext(ThemeContext);
+  const theme =  useTheme();
   console.log(theme);
   theme.testFunction();
   return (
@@ -18,7 +17,6 @@ export default function Signin() {
           <FormInput label="Email" placeholder="john@email.com" name="email" />
           <FormInput label="Password" placeholder="********" name="password" />
           <Submit value="Sign in" />
-
           <div className="flex justify-between">
             <CustomLink to={"/auth/forget-password"}>
               Forget password
